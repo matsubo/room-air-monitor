@@ -166,9 +166,9 @@ display:
     # 2色パネル(Yellow/Blue)前提レイアウト: 上16px=黄(ステータス帯) / 下48px=青(データ帯)
     # 白単色パネルが来ても同じレイアウトでそのまま成立する
     lambda: |-
-      // 焼き付き対策その2: 無人時間帯(23-6時)は消灯
+      // 焼き付き対策その2: 無人時間帯(20-9時)は消灯
       auto t = id(sntp_time).now();
-      if (t.is_valid() && (t.hour >= 23 || t.hour < 6)) return;
+      if (t.is_valid() && (t.hour >= 20 || t.hour < 9)) return;
       // 焼き付き対策その3: 5分ごとに1pxシフト（dyは下方向のみ = 色境界(y=16)を跨がせない）
       int dx = (int)((millis() / 300000UL) % 3) - 1;
       int dy = (int)((millis() / 300000UL) % 2);
@@ -188,8 +188,13 @@ display:
         it.printf(64 + dx, 16 + dy, id(font_big), TextAlign::TOP_CENTER, "----");
       } else {
         // 数字=大font / 単位ppm=小font に分離（大fontのpp descenderが下行へ突き抜けるのを回避）
-        it.printf(62 + dx, 16 + dy, id(font_big), TextAlign::TOP_RIGHT, "%.0f", id(scd_co2).state);
-        it.printf(65 + dx, 25 + dy, id(font_small), TextAlign::TOP_LEFT, "ppm");
+        // 異常値(≥1000ppm)は2s周期で点滅させ注意喚起（消灯フレームは数字を描かない）
+        bool co2_alarm = id(scd_co2).state >= 1000;
+        bool blink_off = ((millis() / 2000UL) % 2) == 1;
+        if (!(co2_alarm && blink_off)) {
+          it.printf(62 + dx, 16 + dy, id(font_big), TextAlign::TOP_RIGHT, "%.0f", id(scd_co2).state);
+          it.printf(65 + dx, 25 + dy, id(font_small), TextAlign::TOP_LEFT, "ppm");
+        }
       }
       it.printf(64 + dx, 40 + dy, id(font_small), TextAlign::TOP_CENTER, "%.1f°C  %.0f%%",
                 id(scd_temp).state, id(scd_rh).state);

@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 680" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <style>
+      .mcu  { fill:#f2f5fb; stroke:#2a78d6; stroke-width:2; }
+      .dev  { fill:#fbfbf9; stroke:#8a8880; stroke-width:1.5; }
+      .title{ font-size:22px; font-weight:700; fill:#111; }
+      .sub  { font-size:12px; fill:#666; }
+      .blk  { font-size:14px; font-weight:700; fill:#111; }
+      .addr { font-size:11px; font-weight:700; fill:#2a78d6; }
+      .pin  { font-size:11px; fill:#333; font-family:ui-monospace,Menlo,monospace; }
+      .lbl  { font-size:10.5px; fill:#444; }
+      .w-3v3 { stroke:#d64545; stroke-width:2.4; fill:none; }
+      .w-gnd { stroke:#333333; stroke-width:2.4; fill:none; }
+      .w-i2c { stroke:#2a78d6; stroke-width:2; fill:none; }
+      .w-i2s { stroke:#1baf7a; stroke-width:2; fill:none; }
+      .dotr  { fill:#d64545; } .dotk { fill:#333333; }
+      .dotb  { fill:#2a78d6; } .dotg { fill:#1baf7a; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1000" height="680" fill="#ffffff"/>
+  <text x="30" y="40" class="title">office-env — 配線図 v3</text>
+  <text x="30" y="60" class="sub">ESP32-C3 SuperMini Plus / I2C(100kHz) + I2S / USB-C 5V → 3.3V。全デバイス3.3V駆動。電源は右バス・信号は左。</text>
+
+  <!-- ===== power: 上=3V3レール / 下=GNDレール / 右=給電バス ===== -->
+  <path class="w-3v3" d="M280 95 L925 95"/>
+  <text x="285" y="88" class="lbl" fill="#d64545" font-weight="700">3V3 レール</text>
+  <path class="w-gnd" d="M295 620 L945 620"/>
+  <text x="300" y="638" class="lbl" fill="#333" font-weight="700">GND レール</text>
+  <path class="w-3v3" d="M925 95 L925 450"/>   <!-- 3V3 右バス -->
+  <path class="w-gnd" d="M945 150 L945 620"/>  <!-- GND 右バス -->
+
+  <!-- ===== MCU ===== -->
+  <rect class="mcu" x="60" y="150" width="190" height="360" rx="12"/>
+  <text x="155" y="182" text-anchor="middle" class="blk">ESP32-C3</text>
+  <text x="155" y="200" text-anchor="middle" class="sub">SuperMini Plus</text>
+  <rect x="30" y="220" width="30" height="46" rx="5" fill="#dddddd" stroke="#999999"/>
+  <text x="45" y="246" text-anchor="middle" class="pin" transform="rotate(-90 45 243)">USB-C</text>
+
+  <circle class="dotr" cx="250" cy="230" r="3.5"/><text x="242" y="234" text-anchor="end" class="pin">3V3</text>
+  <circle class="dotk" cx="250" cy="470" r="3.5"/><text x="242" y="474" text-anchor="end" class="pin">GND</text>
+  <circle class="dotb" cx="250" cy="290" r="3.5"/><text x="242" y="294" text-anchor="end" class="pin">GPIO6 SDA</text>
+  <circle class="dotb" cx="250" cy="320" r="3.5"/><text x="242" y="324" text-anchor="end" class="pin">GPIO7 SCL</text>
+  <circle class="dotg" cx="250" cy="380" r="3.5"/><text x="242" y="384" text-anchor="end" class="pin">GPIO4 BCLK</text>
+  <circle class="dotg" cx="250" cy="410" r="3.5"/><text x="242" y="414" text-anchor="end" class="pin">GPIO5 WS</text>
+  <circle class="dotg" cx="250" cy="440" r="3.5"/><text x="242" y="444" text-anchor="end" class="pin">GPIO3 SD</text>
+  <text x="155" y="495" text-anchor="middle" class="lbl" fill="#999999">未使用: GPIO8 / GPIO9</text>
+
+  <path class="w-3v3" d="M250 230 L280 230 L280 95"/>
+  <path class="w-gnd" d="M250 470 L295 470 L295 620"/>
+
+  <!-- ===== devices ===== -->
+  <rect class="dev" x="700" y="120" width="205" height="70" rx="10"/>
+  <text x="715" y="148" class="blk">SCD41</text><text x="890" y="140" text-anchor="end" class="addr">0x62</text>
+  <text x="715" y="168" class="lbl">CO2 / 温度 / 湿度</text>
+
+  <rect class="dev" x="700" y="215" width="205" height="70" rx="10"/>
+  <text x="715" y="243" class="blk">SGP41</text><text x="890" y="235" text-anchor="end" class="addr">0x59</text>
+  <text x="715" y="263" class="lbl">VOC / NOx 指数</text>
+
+  <rect class="dev" x="700" y="310" width="205" height="70" rx="10"/>
+  <text x="715" y="338" class="blk">SSD1306 OLED</text><text x="890" y="330" text-anchor="end" class="addr">0x3C</text>
+  <text x="715" y="358" class="lbl">128×64 表示</text>
+
+  <rect class="dev" x="700" y="420" width="205" height="95" rx="10"/>
+  <text x="715" y="448" class="blk">INMP441</text>
+  <text x="715" y="468" class="lbl">I2S MEMS マイク（騒音）</text>
+  <text x="715" y="500" class="lbl" fill="#1baf7a" font-weight="700">L/R → GND（左ch固定）</text>
+
+  <!-- device power stubs (right side → 右バス) -->
+  <path class="w-3v3" d="M905 145 L925 145"/><path class="w-gnd" d="M905 168 L945 168"/>
+  <path class="w-3v3" d="M905 240 L925 240"/><path class="w-gnd" d="M905 263 L945 263"/>
+  <path class="w-3v3" d="M905 335 L925 335"/><path class="w-gnd" d="M905 358 L945 358"/>
+  <path class="w-3v3" d="M905 450 L925 450"/><path class="w-gnd" d="M905 475 L945 475"/>
+  <circle class="dotr" cx="925" cy="145" r="3"/><circle class="dotk" cx="945" cy="168" r="3"/>
+  <circle class="dotr" cx="925" cy="240" r="3"/><circle class="dotk" cx="945" cy="263" r="3"/>
+  <circle class="dotr" cx="925" cy="335" r="3"/><circle class="dotk" cx="945" cy="358" r="3"/>
+  <circle class="dotr" cx="925" cy="450" r="3"/><circle class="dotk" cx="945" cy="475" r="3"/>
+
+  <!-- C1 bypass (3V3↔GND, SCD41 VDD直近) -->
+  <path class="w-3v3" d="M925 118 L960 118"/>
+  <path class="w-gnd" d="M960 130 L945 130"/>
+  <line x1="960" y1="108" x2="960" y2="128" stroke="#d64545" stroke-width="2.4"/>
+  <line x1="968" y1="108" x2="968" y2="128" stroke="#333333" stroke-width="2.4"/>
+  <path class="w-gnd" d="M968 130 L968 118"/>
+  <text x="924" y="112" class="lbl">C1 470µF/10V</text>
+
+  <!-- ===== I2C bus (SDA x=340 / SCL x=360) ===== -->
+  <path class="w-i2c" d="M250 290 L340 290 L340 145 L700 145"/>
+  <path class="w-i2c" d="M340 240 L700 240"/>
+  <path class="w-i2c" d="M340 335 L700 335"/>
+  <path class="w-i2c" d="M250 320 L360 320 L360 158 L700 158"/>
+  <path class="w-i2c" d="M360 253 L700 253"/>
+  <path class="w-i2c" d="M360 348 L700 348"/>
+  <text x="374" y="192" class="lbl" fill="#2a78d6" font-weight="700">I2C 100kHz</text>
+  <text x="374" y="206" class="lbl" fill="#2a78d6">SDA / SCL</text>
+  <circle class="dotb" cx="340" cy="240" r="3"/><circle class="dotb" cx="340" cy="335" r="3"/>
+  <circle class="dotb" cx="360" cy="253" r="3"/><circle class="dotb" cx="360" cy="348" r="3"/>
+
+  <!-- ===== I2S bus ===== -->
+  <path class="w-i2s" d="M250 380 L470 380 L470 445 L700 445"/>
+  <path class="w-i2s" d="M250 410 L450 410 L450 465 L700 465"/>
+  <path class="w-i2s" d="M250 440 L430 440 L430 485 L700 485"/>
+  <text x="482" y="405" class="lbl" fill="#1baf7a" font-weight="700">I2S</text>
+
+  <!-- ===== legend ===== -->
+  <g transform="translate(30,660)">
+    <line class="w-3v3" x1="0" y1="0" x2="24" y2="0"/><text x="30" y="4" class="lbl">3V3</text>
+    <line class="w-gnd" x1="70" y1="0" x2="94" y2="0"/><text x="100" y="4" class="lbl">GND</text>
+    <line class="w-i2c" x1="150" y1="0" x2="174" y2="0"/><text x="180" y="4" class="lbl">I2C (SDA/SCL)</text>
+    <line class="w-i2s" x1="320" y1="0" x2="344" y2="0"/><text x="350" y="4" class="lbl">I2S (BCLK/WS/SD)</text>
+  </g>
+  <text x="970" y="662" text-anchor="end" class="sub">office-env-base.yaml のピン定義に準拠（自動生成）</text>
+</svg>

@@ -114,4 +114,4 @@ INFLUX_TOKEN='<TOKEN>' python3 scripts/dashboard.py
 | WiFi に繋がらない | SSID が 2.4GHz か確認（C3 は 5GHz 非対応） |
 | 騒音値が高すぎ／平坦 | 未校正。上記「校正」を実施。中身は Z特性のため dBA より高く出る |
 | マイクが無音 | INMP441 の L/R 結線の個体差。`channel: left` → `right` に変更 |
-| OLED に何も出ない | I2C scan に `0x3C` が出るか確認。深夜(23–6時)は焼き付き対策で消灯する仕様 |
+| OLED に何も出ない | I2C scan に `0x3C` が出るか確認。20–9時は焼き付き対策で消灯する仕様 |
