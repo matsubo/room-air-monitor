@@ -178,6 +178,7 @@ const METRICS = [
   {k:"rssi", label:"WiFi",    unit:"dBm", color:"var(--wifi)",  dec:0},
 ];
 
+// CO2閾値。ファーム側は office-env-base.yaml の substitutions(co2_high=1500)と揃えること
 function co2Status(v){
   if (v < 800) return {t:"良好", c:"var(--good)"};
   if (v < 1500) return {t:"注意", c:"var(--warning)"};

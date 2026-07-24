@@ -7,6 +7,8 @@ substitutions:
   device_name: env-0        # ラッパー側で上書き
   friendly_name: Office Env 0
   room: test                # InfluxDBのroomタグ。英小文字スネークケース
+  co2_high: "1500"          # CO2警告バナー(CO2 HIGH)閾値[ppm]。ダッシュボードJS/READMEの閾値と揃える
+  co2_blink: "1000"         # CO2数字を点滅させる異常値閾値[ppm]
 
 esphome:
   name: ${device_name}
@@ -34,6 +36,13 @@ wifi:
   password: !secret wifi_password
   power_save_mode: none
   output_power: 8.5dB              # C3 SuperMini安定化: TX電力下げてブラウンアウト回避（Probe Request Unsuccessful対策）
+  fast_connect: true               # 単一SSIDへスキャン省略で直結。RETRY_HIDDEN/SCAN失敗の連発を回避
+  # OTA安定化用の固定IP。mDNS(env-N.local)が引けない/クライアント分離環境では
+  # 個体ごとに下記を有効化しIP直指定でOTAする（値はラッパー側substitutionsで上書き推奨）
+  # manual_ip:
+  #   static_ip: 192.168.0.101
+  #   gateway: 192.168.0.1
+  #   subnet: 255.255.255.0
   ap:                              # 接続失敗時のフォールバックAP（現地で設定変更用）
     ssid: "${device_name} setup"
     password: !secret fallback_ap_password
@@ -175,7 +184,7 @@ display:
       int dy = (int)(tick5 % 2);
       // ---- 黄色帯(y0-15): 左=部屋名 / 右=状態。CO2警報時は警告バナーに化ける ----
       it.printf(0 + dx, 2 + dy, id(font_small), TextAlign::TOP_LEFT, "${room}");
-      if (!std::isnan(id(scd_co2).state) && id(scd_co2).state >= 1500) {
+      if (!std::isnan(id(scd_co2).state) && id(scd_co2).state >= ${co2_high}) {
         it.printf(128 + dx, 2 + dy, id(font_small), TextAlign::TOP_RIGHT, "CO2 HIGH");
       } else {
         char rs[6] = "--";
@@ -190,7 +199,7 @@ display:
       } else {
         // 数字=大font / 単位ppm=小font に分離（大fontのpp descenderが下行へ突き抜けるのを回避）
         // 異常値(≥1000ppm)は2s周期で点滅させ注意喚起（消灯フレームは数字を描かない）
-        bool co2_alarm = id(scd_co2).state >= 1000;
+        bool co2_alarm = id(scd_co2).state >= ${co2_blink};
         bool blink_off = ((millis() / 2000UL) % 2) == 1;
         if (!(co2_alarm && blink_off)) {
           it.printf(62 + dx, 16 + dy, id(font_big), TextAlign::TOP_RIGHT, "%.0f", id(scd_co2).state);

@@ -1,0 +1,8 @@
+# env-3.yaml — 個体別ラッパー（env-1.yaml のコピー。substitutions 3行だけ変更）
+substitutions:
+  device_name: env-3          # ESPHome上のノード名（英小文字とハイフン）
+  friendly_name: Office Env 3
+  room: room_3                # ← 設置する部屋名に変更（InfluxDBのroomタグ・英小文字スネークケース）
+
+packages:
+  base: !include office-env-base.yaml
