@@ -2,6 +2,8 @@
 
 ESP32-C3 + ESPHome によるオフィス環境モニタ。CO2・温度・湿度・VOC・NOx・騒音を計測し、毎分 InfluxDB へ送信する。手元に現在値を表示する OLED 付き。3台同構成で運用する前提。
 
+![実機の動作例。OLED に部屋名・WiFi RSSI・送信状態と、CO2・温湿度・VOC・騒音の現在値を表示](docs/img/device.jpg)
+
 ## 計測項目
 
 | 項目 | センサ | 単位 |
