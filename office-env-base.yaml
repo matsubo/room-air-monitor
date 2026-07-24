@@ -1,0 +1,241 @@
+# office-env-base.yaml — オフィス環境モニタ 3台共通ベース設定
+# 回路図v3対応: SCD41 + SGP41 + SSD1306 (I2C: GPIO6/7) / INMP441 (I2S: GPIO4/5/3)
+# 使い方: env-1.yaml 等の薄いラッパーから packages で include する
+# 注意: sound_level は新しめの公式コンポーネント。ESPHome本体を最新にしてビルドすること
+
+substitutions:
+  device_name: env-0        # ラッパー側で上書き
+  friendly_name: Office Env 0
+  room: test                # InfluxDBのroomタグ。英小文字スネークケース
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: esp32c3
+  framework:
+    type: esp-idf
+
+logger:
+  hardware_uart: USB_SERIAL_JTAG   # SuperMiniはUSB-C直結でログが見える
+  level: INFO                      # 受入検査時はDEBUGに上げる
+
+api:
+  reboot_timeout: 0s   # HA未接続で運用するため無効化必須（デフォルトだと15分毎に再起動する）
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none
+  output_power: 8.5dB              # C3 SuperMini安定化: TX電力下げてブラウンアウト回避（Probe Request Unsuccessful対策）
+  ap:                              # 接続失敗時のフォールバックAP（現地で設定変更用）
+    ssid: "${device_name} setup"
+    password: !secret fallback_ap_password
+
+captive_portal:
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Asia/Tokyo
+
+globals:
+  - id: g_post_ok
+    type: bool
+    initial_value: 'false'
+
+http_request:
+  timeout: 10s
+
+# ---------- バス ----------
+i2c:
+  sda: GPIO6
+  scl: GPIO7
+  frequency: 100kHz   # SCD41の上限が100kHz
+  scan: true          # 起動ログに 0x3C / 0x59 / 0x62 が並べば配線OK
+
+i2s_audio:
+  - id: i2s_in
+    i2s_lrclk_pin: GPIO5   # INMP441のWS
+    i2s_bclk_pin: GPIO4    # INMP441のSCK
+
+microphone:
+  - platform: i2s_audio
+    id: mic_i2s
+    i2s_audio_id: i2s_in
+    i2s_din_pin: GPIO3     # INMP441のSD
+    adc_type: external
+    pdm: false
+    sample_rate: 16000
+    bits_per_sample: 32bit
+    channel: left          # L/R→GND=左ch。もし無音なら right に変更（クローン基板で逆の個体あり）
+
+# ---------- センサ ----------
+sensor:
+  - platform: scd4x
+    co2:
+      name: "CO2"
+      id: scd_co2
+    temperature:
+      name: "Temperature"
+      id: scd_temp
+    humidity:
+      name: "Humidity"
+      id: scd_rh
+    automatic_self_calibration: true
+    temperature_offset: 4.0   # ケース組込後にスマホ/室温計と比較して校正
+    update_interval: 15s
+
+  - platform: sgp4x
+    voc:
+      name: "VOC Index"
+      id: sgp_voc
+    nox:
+      name: "NOx Index"
+      id: sgp_nox
+    compensation:                    # SCD41の温湿度で補償（この構成の要）
+      temperature_source: scd_temp
+      humidity_source: scd_rh
+    store_baseline: true
+
+  # 騒音: 公式sound_level = 周波数重み無し(Z特性相当)のRMS。
+  # A特性が必要になったら stas-sl/esphome-sound-level-meter に差し替え可能だが、
+  # 快適性トレンド用途ではオフセット校正済みZ特性で十分と判断。
+  - platform: sound_level
+    microphone: mic_i2s
+    passive: false
+    measurement_duration: 1s
+    rms:
+      name: "Sound Level"
+      id: snd_spl
+      unit_of_measurement: "dB"
+      accuracy_decimals: 1
+      filters:
+        - offset: 81.1    # 1点校正済(2026-07-24, open_space): スマホ41.3dBA vs 生表示80.2dB → 120+(41.3-80.2)。注:Z特性をdBAに合わせた値
+
+  - platform: copy       # 1分等価騒音レベル（dB算術平均の近似）
+    source_id: snd_spl
+    id: snd_laeq
+    name: "LAeq 1min"
+    filters:
+      - throttle_average: 60s
+
+  - platform: copy       # 1分最大値
+    source_id: snd_spl
+    id: snd_lamax
+    name: "LAmax 1min"
+    filters:
+      - max:
+          window_size: 60
+          send_every: 60
+          send_first_at: 60
+
+  - platform: wifi_signal
+    id: wifi_rssi
+    name: "WiFi RSSI"
+    update_interval: 60s
+
+# ---------- OLED ----------
+font:
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 700
+    id: font_big
+    size: 24
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 400
+    id: font_small
+    size: 11
+
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3C
+    id: oled
+    contrast: 40%        # 焼き付き対策その1（スキーマエラーが出るESPHome版なら行ごと削除可）
+    update_interval: 2s
+    # 2色パネル(Yellow/Blue)前提レイアウト: 上16px=黄(ステータス帯) / 下48px=青(データ帯)
+    # 白単色パネルが来ても同じレイアウトでそのまま成立する
+    lambda: |-
+      // 焼き付き対策その2: 無人時間帯(23-6時)は消灯
+      auto t = id(sntp_time).now();
+      if (t.is_valid() && (t.hour >= 23 || t.hour < 6)) return;
+      // 焼き付き対策その3: 5分ごとに1pxシフト（dyは下方向のみ = 色境界(y=16)を跨がせない）
+      int dx = (int)((millis() / 300000UL) % 3) - 1;
+      int dy = (int)((millis() / 300000UL) % 2);
+      // ---- 黄色帯(y0-15): 左=部屋名 / 右=状態。CO2警報時は警告バナーに化ける ----
+      it.printf(0 + dx, 2 + dy, id(font_small), TextAlign::TOP_LEFT, "${room}");
+      if (!std::isnan(id(scd_co2).state) && id(scd_co2).state >= 1500) {
+        it.printf(128 + dx, 2 + dy, id(font_small), TextAlign::TOP_RIGHT, "CO2 HIGH");
+      } else {
+        char rs[6] = "--";
+        if (!std::isnan(id(wifi_rssi).state))
+          snprintf(rs, sizeof(rs), "%.0f", id(wifi_rssi).state);
+        it.printf(128 + dx, 2 + dy, id(font_small), TextAlign::TOP_RIGHT, "%s %s",
+                  rs, id(g_post_ok) ? "tx ok" : "tx --");
+      }
+      // ---- 青帯(y16-63): データ ----
+      if (std::isnan(id(scd_co2).state)) {
+        it.printf(64 + dx, 16 + dy, id(font_big), TextAlign::TOP_CENTER, "----");
+      } else {
+        // 数字=大font / 単位ppm=小font に分離（大fontのpp descenderが下行へ突き抜けるのを回避）
+        it.printf(62 + dx, 16 + dy, id(font_big), TextAlign::TOP_RIGHT, "%.0f", id(scd_co2).state);
+        it.printf(65 + dx, 25 + dy, id(font_small), TextAlign::TOP_LEFT, "ppm");
+      }
+      it.printf(64 + dx, 40 + dy, id(font_small), TextAlign::TOP_CENTER, "%.1f°C  %.0f%%",
+                id(scd_temp).state, id(scd_rh).state);
+      it.printf(64 + dx, 51 + dy, id(font_small), TextAlign::TOP_CENTER, "voc %.0f  %.1f dB",
+                id(sgp_voc).state, id(snd_spl).state);
+
+# ---------- InfluxDBへ毎分POST（README手順7の契約に準拠） ----------
+interval:
+  - interval: 60s
+    then:
+      - if:
+          condition:
+            wifi.connected:
+          then:
+            - http_request.post:
+                url: !secret influx_write_url
+                request_headers:
+                  Authorization: !secret influx_auth_header
+                  Content-Type: "text/plain; charset=utf-8"
+                body: !lambda |-
+                  std::string lp = "env,room=${room},device=${device_name} ";
+                  bool first = true;
+                  auto add_f = [&](const char *k, float v, int prec) {
+                    if (std::isnan(v)) return;
+                    char b[48];
+                    snprintf(b, sizeof(b), "%s%s=%.*f", first ? "" : ",", k, prec, v);
+                    lp += b; first = false;
+                  };
+                  auto add_i = [&](const char *k, float v) {
+                    if (std::isnan(v)) return;
+                    char b[48];
+                    snprintf(b, sizeof(b), "%s%s=%di", first ? "" : ",", k, (int) lroundf(v));
+                    lp += b; first = false;
+                  };
+                  add_i("co2",   id(scd_co2).state);
+                  add_f("temp",  id(scd_temp).state, 2);
+                  add_f("rh",    id(scd_rh).state, 1);
+                  add_i("voc",   id(sgp_voc).state);
+                  add_i("nox",   id(sgp_nox).state);
+                  add_f("laeq",  id(snd_laeq).state, 1);
+                  add_f("lamax", id(snd_lamax).state, 1);
+                  add_i("rssi",  id(wifi_rssi).state);
+                  if (first) lp += "up=1i";   // 起動直後で全センサNaNでも400を避ける
+                  return lp;
+                on_response:
+                  then:
+                    - lambda: |-
+                        id(g_post_ok) = (response->status_code == 204);
+
