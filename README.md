@@ -80,6 +80,11 @@ curl -s 'https://<region>.aws.cloud2.influxdata.com/api/v2/query?org=<ORG_ID>' \
 
 - measurement: `env` / tags: `room`, `device` / fields: `co2` `temp` `rh` `voc` `nox` `laeq` `lamax` `rssi` `mcu_temp`
 - 常設ダッシュボードは Grafana を推奨。
+- **点データの削除はできない。** `office_env` は Cloud Serverless (v3) バケットのため
+  `POST /api/v2/delete` が `405 Deletes ranges are not supported for serverless v3 buckets`
+  を返す（device 別・期間別の削除も不可）。retention は 30日なので不要データは放置すれば消える。
+  グラフから隠すだけならクエリ側に時刻下限を足す。物理削除は「エクスポート→バケット削除→同名で再作成
+  →再投入」しかなく、バケットIDが変わって書き込みトークンが無効化されるため全台の再フラッシュが必要。
 
 ## ローカルダッシュボード
 
@@ -124,8 +129,8 @@ INFLUX_TOKEN='<TOKEN>' python3 scripts/dashboard.py
 
 ## InfluxDB ダッシュボード（device 横断・多系列）
 
-環境メトリック（co2 / temp / rh / voc / laeq）を device 別の多系列で表示する
-InfluxDB Cloud ダッシュボードを、テンプレートから適用する。
+環境メトリック（co2 / temp / rh / voc / laeq / mcu_temp）を device 別の多系列で
+表示する InfluxDB Cloud ダッシュボードを、テンプレートから適用する。6セル構成。
 
 - テンプレート定義: `influx/dashboard-office-env.json`
 - 適用スクリプト: `scripts/apply_dashboard.py`（Python 標準ライブラリのみ）
@@ -134,10 +139,33 @@ device 固定フィルタを置かず `group(columns:["device"])` で系列化�
 env-2 / env-3 を投入すると系列が自動で増える。粒度は `v.windowPeriod` により
 UI の時間レンジ・ズームに追従する。
 
+### device ごとの色固定
+
+既定の色スケールは系列の**出現順**に色を割り当てるため、台数や系列の増減でセル間の
+色がズレる（実際に env-2 と env-3 が同じ紫になっていた）。これを避けるため各セルに
+`colorMapping` を明示し、device → 色を固定する。
+
+| device | 色 |
+|---|---|
+| env-1 | `#3987e5`（青） |
+| env-2 | `#d95926`（橙） |
+| env-3 | `#199e70`（緑） |
+
+`colorMapping` のキーは InfluxDB UI が生成する系列ID形式 **`<device>-_result-`**
+（`columnKeys = [...fluxGroupKeyUnion, "result"]` の値を `-` 連結・`_start`/`_stop`
+は除外）と完全一致させる必要がある。キーが一致しない場合、UI はマッピングを破棄して
+既定スケールで再生成する（`colors` も同じ device 順に並べてあるため、その場合も
+見た目は同じ色に落ちる）。台数を増やすときは全セルの `colors` と `colorMapping` に
+同じ順で追記する（整合性は `tests/test_dashboard_template.py` で検証）。
+
+既知の制約: 選択レンジ内に一部の device のデータが1点も無いと、UI は系列集合の変化を
+検出してそのセルのマッピングを再生成する（そのレンジでは色がズレうる）。
+
 ### 準備
 
-`config/secrets.yaml` にダッシュボード読み書き権限のトークンを設定する（環境変数
-`INFLUX_DASHBOARD_TOKEN` でも可）。
+`config/secrets.yaml` にダッシュボードの**読み取り＋書き込み**権限のトークンを設定する
+（環境変数 `INFLUX_DASHBOARD_TOKEN` でも可）。書き込みのみのトークンでは
+`--stack-id` での更新が `read:...dashboards/<id> is unauthorized` で失敗する。
 
 ```
 influx_dashboard_token: "<token>"

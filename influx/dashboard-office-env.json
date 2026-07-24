@@ -5,7 +5,7 @@
     "metadata": { "name": "office-env-multi" },
     "spec": {
       "name": "Office Env — 全台横断",
-      "description": "環境メトリックを device 別多系列で表示。device 固定フィルタなし=台数自動スケール。",
+      "description": "環境メトリックを device 別多系列で表示。device 固定フィルタなし=台数自動スケール。色は device ごとに固定（env-1=青 #3987e5 / env-2=橙 #d95926 / env-3=緑 #199e70）。colorMapping のキーは UI が生成する系列ID形式 \"<device>-_result-\" と一致させること。台数を増やす場合は全セルの colors と colorMapping に同じ順で追記する。",
       "charts": [
         {
           "kind": "Xy",
@@ -25,10 +25,15 @@
             { "name": "y", "base": "10", "scale": "linear", "label": "ppm" }
           ],
           "colors": [
-            { "type": "scale", "hex": "#31C0F6" },
-            { "type": "scale", "hex": "#A500A5" },
-            { "type": "scale", "hex": "#FF7E27" }
-          ]
+            { "type": "scale", "hex": "#3987e5" },
+            { "type": "scale", "hex": "#d95926" },
+            { "type": "scale", "hex": "#199e70" }
+          ],
+          "colorMapping": {
+            "env-1-_result-": "#3987e5",
+            "env-2-_result-": "#d95926",
+            "env-3-_result-": "#199e70"
+          }
         },
         {
           "kind": "Xy",
@@ -48,10 +53,15 @@
             { "name": "y", "base": "10", "scale": "linear", "label": "°C" }
           ],
           "colors": [
-            { "type": "scale", "hex": "#31C0F6" },
-            { "type": "scale", "hex": "#A500A5" },
-            { "type": "scale", "hex": "#FF7E27" }
-          ]
+            { "type": "scale", "hex": "#3987e5" },
+            { "type": "scale", "hex": "#d95926" },
+            { "type": "scale", "hex": "#199e70" }
+          ],
+          "colorMapping": {
+            "env-1-_result-": "#3987e5",
+            "env-2-_result-": "#d95926",
+            "env-3-_result-": "#199e70"
+          }
         },
         {
           "kind": "Xy",
@@ -71,10 +81,15 @@
             { "name": "y", "base": "10", "scale": "linear", "label": "%" }
           ],
           "colors": [
-            { "type": "scale", "hex": "#31C0F6" },
-            { "type": "scale", "hex": "#A500A5" },
-            { "type": "scale", "hex": "#FF7E27" }
-          ]
+            { "type": "scale", "hex": "#3987e5" },
+            { "type": "scale", "hex": "#d95926" },
+            { "type": "scale", "hex": "#199e70" }
+          ],
+          "colorMapping": {
+            "env-1-_result-": "#3987e5",
+            "env-2-_result-": "#d95926",
+            "env-3-_result-": "#199e70"
+          }
         },
         {
           "kind": "Xy",
@@ -94,15 +109,20 @@
             { "name": "y", "base": "10", "scale": "linear", "label": "index" }
           ],
           "colors": [
-            { "type": "scale", "hex": "#31C0F6" },
-            { "type": "scale", "hex": "#A500A5" },
-            { "type": "scale", "hex": "#FF7E27" }
-          ]
+            { "type": "scale", "hex": "#3987e5" },
+            { "type": "scale", "hex": "#d95926" },
+            { "type": "scale", "hex": "#199e70" }
+          ],
+          "colorMapping": {
+            "env-1-_result-": "#3987e5",
+            "env-2-_result-": "#d95926",
+            "env-3-_result-": "#199e70"
+          }
         },
         {
           "kind": "Xy",
           "name": "騒音 LAeq (dB)",
-          "xPos": 0, "yPos": 8, "width": 12, "height": 4,
+          "xPos": 0, "yPos": 8, "width": 6, "height": 4,
           "position": "overlaid",
           "geom": "line",
           "xCol": "_time",
@@ -117,10 +137,43 @@
             { "name": "y", "base": "10", "scale": "linear", "label": "dB" }
           ],
           "colors": [
-            { "type": "scale", "hex": "#31C0F6" },
-            { "type": "scale", "hex": "#A500A5" },
-            { "type": "scale", "hex": "#FF7E27" }
-          ]
+            { "type": "scale", "hex": "#3987e5" },
+            { "type": "scale", "hex": "#d95926" },
+            { "type": "scale", "hex": "#199e70" }
+          ],
+          "colorMapping": {
+            "env-1-_result-": "#3987e5",
+            "env-2-_result-": "#d95926",
+            "env-3-_result-": "#199e70"
+          }
+        },
+        {
+          "kind": "Xy",
+          "name": "ESP32内蔵温度 (°C)",
+          "xPos": 6, "yPos": 8, "width": 6, "height": 4,
+          "position": "overlaid",
+          "geom": "line",
+          "xCol": "_time",
+          "yCol": "_value",
+          "hoverDimension": "auto",
+          "legendColorizeRows": true,
+          "queries": [
+            { "query": "from(bucket: \"office_env\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"env\" and r._field == \"mcu_temp\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group(columns: [\"device\"])" }
+          ],
+          "axes": [
+            { "name": "x", "base": "10", "scale": "linear" },
+            { "name": "y", "base": "10", "scale": "linear", "label": "°C" }
+          ],
+          "colors": [
+            { "type": "scale", "hex": "#3987e5" },
+            { "type": "scale", "hex": "#d95926" },
+            { "type": "scale", "hex": "#199e70" }
+          ],
+          "colorMapping": {
+            "env-1-_result-": "#3987e5",
+            "env-2-_result-": "#d95926",
+            "env-3-_result-": "#199e70"
+          }
         }
       ]
     }

@@ -5,7 +5,15 @@ import unittest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_PATH = os.path.join(ROOT, "influx", "dashboard-office-env.json")
 
-FIELDS = ["co2", "temp", "rh", "voc", "laeq"]
+FIELDS = ["co2", "temp", "rh", "voc", "laeq", "mcu_temp"]
+
+# device ごとの固定色。キーは InfluxDB UI が生成する系列ID形式 "<device>-_result-"
+# （columnKeys = [...fluxGroupKeyUnion, "result"] の値を "-" 連結）と一致する必要がある。
+DEVICE_COLORS = {
+    "env-1-_result-": "#3987e5",
+    "env-2-_result-": "#d95926",
+    "env-3-_result-": "#199e70",
+}
 
 
 def load_template():
@@ -30,10 +38,10 @@ class TemplateStructureTest(unittest.TestCase):
         self.assertEqual(dash.get("apiVersion"), "influxdata.com/v2alpha1")
         self.assertIn("name", dash.get("metadata", {}))
 
-    def test_has_five_charts(self):
+    def test_has_six_charts(self):
         dash = next(r for r in self.contents if r.get("kind") == "Dashboard")
         charts = dash["spec"]["charts"]
-        self.assertEqual(len(charts), 5)
+        self.assertEqual(len(charts), 6)
 
     def test_each_chart_is_xy_line(self):
         dash = next(r for r in self.contents if r.get("kind") == "Dashboard")
@@ -62,6 +70,31 @@ class TemplateStructureTest(unittest.TestCase):
             self.assertIn("v.timeRangeStart", q)
             self.assertNotIn('r.device ==', q)
             self.assertNotIn('r["device"] ==', q)
+
+    def test_device_colors_are_fixed_in_every_chart(self):
+        """全セルで device→色 が同一。セル間で同じ device が違う色になるのを防ぐ。"""
+        dash = next(r for r in self.contents if r.get("kind") == "Dashboard")
+        for c in dash["spec"]["charts"]:
+            self.assertEqual(c.get("colorMapping"), DEVICE_COLORS, c["name"])
+
+    def test_color_scale_matches_device_color_order(self):
+        """colorMapping が使えない場合（系列集合が変化した描画）でも同じ色になるよう
+        colors の並び順を device 順と一致させる。"""
+        dash = next(r for r in self.contents if r.get("kind") == "Dashboard")
+        for c in dash["spec"]["charts"]:
+            hexes = [x["hex"] for x in c["colors"]]
+            self.assertEqual(hexes, list(DEVICE_COLORS.values()), c["name"])
+
+    def test_cells_do_not_overlap(self):
+        """12カラムグリッド上でセルが重ならないこと。"""
+        dash = next(r for r in self.contents if r.get("kind") == "Dashboard")
+        occupied = set()
+        for c in dash["spec"]["charts"]:
+            self.assertLessEqual(c["xPos"] + c["width"], 12, c["name"])
+            for x in range(c["xPos"], c["xPos"] + c["width"]):
+                for y in range(c["yPos"], c["yPos"] + c["height"]):
+                    self.assertNotIn((x, y), occupied, f'{c["name"]} が ({x},{y}) で重複')
+                    occupied.add((x, y))
 
     def test_measurement_and_bucket(self):
         dash = next(r for r in self.contents if r.get("kind") == "Dashboard")
