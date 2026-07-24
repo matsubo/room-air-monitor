@@ -9,3 +9,10 @@
 
 # playwright-cli セッション残骸
 /.playwright-cli/
+
+# Python
+__pycache__/
+*.pyc
+
+# superpowers スキルの作業ファイル（成果物ではない）
+/docs/superpowers/
