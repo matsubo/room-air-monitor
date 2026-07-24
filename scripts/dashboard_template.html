@@ -20,6 +20,7 @@
     --voc: #c98500;
     --noise: #d55181;
     --wifi: #9085e9;
+    --mcu: #22b8c4;
     --r: 14px;
     --sans: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
   }
@@ -41,6 +42,7 @@
       --voc: #eda100;
       --noise: #e87ba4;
       --wifi: #4a3aa7;
+      --mcu: #0e97a2;
     }
   }
   :root[data-theme="light"] .viz {
@@ -60,6 +62,7 @@
     --voc: #eda100;
     --noise: #e87ba4;
     --wifi: #4a3aa7;
+    --mcu: #0e97a2;
   }
 
   * { box-sizing: border-box; }
@@ -176,6 +179,7 @@ const METRICS = [
   {k:"voc",  label:"VOC",     unit:"idx", color:"var(--voc)",   dec:0},
   {k:"laeq", label:"騒音",    unit:"dB",  color:"var(--noise)", dec:1},
   {k:"rssi", label:"WiFi",    unit:"dBm", color:"var(--wifi)",  dec:0},
+  {k:"mcu_temp", label:"MCU", unit:"°C",  color:"var(--mcu)",   dec:1},
 ];
 
 // CO2閾値。ファーム側は office-env-base.yaml の substitutions(co2_high=1500)と揃えること

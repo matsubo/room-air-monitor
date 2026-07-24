@@ -32,7 +32,7 @@ JST = timezone(timedelta(hours=9))
 
 # フィールド定義（単一の出所）: (キー, 整数として丸めるか)
 FIELDS = [("co2", True), ("temp", False), ("rh", True),
-          ("voc", True), ("laeq", False), ("rssi", True)]
+          ("voc", True), ("laeq", False), ("rssi", True), ("mcu_temp", False)]
 METRIC_KEYS = [k for k, _ in FIELDS]
 
 
