@@ -115,3 +115,37 @@ INFLUX_TOKEN='<TOKEN>' python3 scripts/dashboard.py
 | 騒音値が高すぎ／平坦 | 未校正。上記「校正」を実施。中身は Z特性のため dBA より高く出る |
 | マイクが無音 | INMP441 の L/R 結線の個体差。`channel: left` → `right` に変更 |
 | OLED に何も出ない | I2C scan に `0x3C` が出るか確認。20–9時は焼き付き対策で消灯する仕様 |
+
+## InfluxDB ダッシュボード（device 横断・多系列）
+
+環境メトリック（co2 / temp / rh / voc / laeq）を device 別の多系列で表示する
+InfluxDB Cloud ダッシュボードを、テンプレートから適用する。
+
+- テンプレート定義: `influx/dashboard-office-env.json`
+- 適用スクリプト: `scripts/apply_dashboard.py`（Python 標準ライブラリのみ）
+
+device 固定フィルタを置かず `group(columns:["device"])` で系列化するため、
+env-2 / env-3 を投入すると系列が自動で増える。粒度は `v.windowPeriod` により
+UI の時間レンジ・ズームに追従する。
+
+### 準備
+
+`secrets.yaml` にダッシュボード読み書き権限のトークンを設定する（環境変数
+`INFLUX_DASHBOARD_TOKEN` でも可）。
+
+```
+influx_dashboard_token: "<token>"
+```
+
+### 適用
+
+```sh
+# 検証のみ（作成しない）。まず必ずこれで確認する
+python3 scripts/apply_dashboard.py --dry-run
+
+# 本適用（実ダッシュボード作成）
+python3 scripts/apply_dashboard.py
+
+# 既存スタックを更新（重複生成を避ける）
+python3 scripts/apply_dashboard.py --stack-id <STACK_ID>
+```
