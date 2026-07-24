@@ -4,6 +4,8 @@
 # esphome のビルドキャッシュ（config/ 配下でも生成されるため場所固定にしない）
 .esphome/
 /config/secrets.yaml
+# esphome が config/ 配下に自動生成する .gitignore（root の本ファイルで代替済み）
+/config/.gitignore
 
 # 生成物（dashboard.py の出力）
 /dist/

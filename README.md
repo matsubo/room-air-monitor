@@ -13,6 +13,7 @@ ESP32-C3 + ESPHome によるオフィス環境モニタ。CO2・温度・湿度�
 | VOC Index / NOx Index | SGP41 | index |
 | 騒音（Z特性RMS音圧, 1点校正済） | INMP441 | dB |
 | WiFi RSSI | ESP32-C3 | dBm |
+| MCU温度（チップ内蔵・発熱監視用） | ESP32-C3 | ℃ |
 
 詳細設計（アーキテクチャ・BOM・回路・データ契約・設置・実戦トラブルシュート）は [`docs/design.md`](docs/design.md) を参照。
 
@@ -77,7 +78,7 @@ curl -s 'https://<region>.aws.cloud2.influxdata.com/api/v2/query?org=<ORG_ID>' \
           |> filter(fn:(r)=> r.device=="env-1") |> tail(n:20)'
 ```
 
-- measurement: `env` / tags: `room`, `device` / fields: `co2` `temp` `rh` `voc` `nox` `laeq` `lamax` `rssi`
+- measurement: `env` / tags: `room`, `device` / fields: `co2` `temp` `rh` `voc` `nox` `laeq` `lamax` `rssi` `mcu_temp`
 - 常設ダッシュボードは Grafana を推奨。
 
 ## ローカルダッシュボード

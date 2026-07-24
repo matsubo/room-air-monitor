@@ -5,7 +5,7 @@ InfluxDB Cloudに集約して可視化する自作センサノード。
 
 - ハード: ESP32-C3 + Sensirionセンサ群、1台あたり約¥6,300
 - ファーム: ESPHome（カスタムコードなし、YAMLのみ）
-- データ: 毎分1点 × 8フィールド × 3台 → InfluxDB Cloud Serverless
+- データ: 毎分1点 × 9フィールド × 3台 → InfluxDB Cloud Serverless
 
 ## アーキテクチャ
 
@@ -114,7 +114,7 @@ esphome run config/env-1.yaml   # ポートは /dev/cu.usbmodem*
 - 頻度: 60秒ごとに1行
 
 ```
-env,room=<部屋名>,device=<個体名> co2=675i,temp=25.90,rh=71.0,voc=108i,nox=1i,laeq=38.1,lamax=55.0,rssi=-45i
+env,room=<部屋名>,device=<個体名> co2=675i,temp=25.90,rh=71.0,voc=108i,nox=1i,laeq=38.1,lamax=55.0,rssi=-45i,mcu_temp=48.9
 ```
 
 | field | 型 | 内容 |
@@ -124,6 +124,7 @@ env,room=<部屋名>,device=<個体名> co2=675i,temp=25.90,rh=71.0,voc=108i,nox
 | voc / nox | int | Sensirion指数 1–500（100=直近24hベースライン、相対値） |
 | laeq / lamax | float | 1分平均 / 1分最大 dB（校正後） |
 | rssi | int | WiFi RSSI dBm（設置サーベイ・死活監視用） |
+| mcu_temp | float | ESP32-C3チップ内蔵温度センサの接合部温度°C（発熱監視用。**室温ではない**） |
 
 tag値は英小文字スネークケースのみ（例: `open_space`）。日本語・スペース禁止。
 
