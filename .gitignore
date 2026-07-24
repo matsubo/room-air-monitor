@@ -6,3 +6,6 @@
 
 # 生成物（dashboard.py の出力）
 /dist/
+
+# playwright-cli セッション残骸
+/.playwright-cli/
