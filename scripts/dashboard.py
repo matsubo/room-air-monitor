@@ -23,13 +23,17 @@ import re
 import sys
 import urllib.request
 import urllib.error
+import urllib.parse
 import webbrowser
 from datetime import datetime, timezone, timedelta
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 JST = timezone(timedelta(hours=9))
 
-METRIC_KEYS = ["co2", "temp", "rh", "voc", "laeq", "rssi"]
+# フィールド定義（単一の出所）: (キー, 整数として丸めるか)
+FIELDS = [("co2", True), ("temp", False), ("rh", True),
+          ("voc", True), ("laeq", False), ("rssi", True)]
+METRIC_KEYS = [k for k, _ in FIELDS]
 
 
 def load_secrets(path):
@@ -50,21 +54,17 @@ def load_secrets(path):
 
 def resolve_conn(secrets):
     """クエリURLとトークンを解決（環境変数 > secrets.yaml）。"""
-    token = os.environ.get("INFLUX_TOKEN")
+    token = (os.environ.get("INFLUX_TOKEN") or secrets.get("influx_auth_header", "")).replace("Token ", "").strip()
     query_url = os.environ.get("INFLUX_QUERY_URL")
-
-    if not token:
-        auth = secrets.get("influx_auth_header", "")
-        token = auth.replace("Token ", "").strip()
-    token = token.replace("Token ", "").strip()
 
     if not query_url:
         write_url = secrets.get("influx_write_url", "")
-        # write?...&org=ID... から query?org=ID を組み立てる
-        m_host = re.match(r"(https?://[^/]+)/api/v2/write", write_url)
-        m_org = re.search(r"[?&]org=([^&]+)", write_url)
-        if m_host and m_org:
-            query_url = f"{m_host.group(1)}/api/v2/query?org={m_org.group(1)}"
+        if write_url:
+            # write URL の host と org から query URL を組み立てる
+            u = urllib.parse.urlsplit(write_url)
+            org = urllib.parse.parse_qs(u.query).get("org", [""])[0]
+            if u.netloc and org:
+                query_url = f"{u.scheme}://{u.netloc}/api/v2/query?org={org}"
 
     if not token or not query_url:
         sys.exit("認証情報が見つからない。secrets.yaml を用意するか INFLUX_TOKEN / INFLUX_QUERY_URL を設定して。")
@@ -76,8 +76,8 @@ def fetch(query_url, token, device, rng):
         f'from(bucket:"office_env") |> range(start:-{rng})\n'
         f'  |> filter(fn:(r)=> r.device=="{device}")\n'
         f'  |> filter(fn:(r)=> ' + " or ".join(f'r._field=="{k}"' for k in METRIC_KEYS) + ')\n'
-        f'  |> pivot(rowKey:["_time"], columnKey:["_field"], valueColumn:"_value")\n'
-        f'  |> keep(columns:["_time",' + ",".join(f'"{k}"' for k in METRIC_KEYS) + '])\n'
+        f'  |> pivot(rowKey:["_time","room"], columnKey:["_field"], valueColumn:"_value")\n'
+        f'  |> keep(columns:["_time","room",' + ",".join(f'"{k}"' for k in METRIC_KEYS) + '])\n'
         f'  |> sort(columns:["_time"])'
     )
     req = urllib.request.Request(
@@ -100,7 +100,8 @@ def fetch(query_url, token, device, rng):
 
 
 def parse_csv(text):
-    rows = []
+    """CSV を行データに変換し (rows, room) を返す。"""
+    rows, room = [], ""
     reader = csv.reader(io.StringIO(text))
     header = None
     for line in reader:
@@ -117,26 +118,15 @@ def parse_csv(text):
             continue
         # 例: 2026-07-24T03:38:24.777Z → 小数秒を除去しつつ UTC のまま aware 化
         iso = re.sub(r"\.\d+", "", t).replace("Z", "+00:00")
-        dt = datetime.fromisoformat(iso)
-        jst = dt.astimezone(JST)
+        jst = datetime.fromisoformat(iso).astimezone(JST)
+        room = rec.get("room", "") or room
 
-        def num(k, intish):
+        row = {"t": jst.strftime("%H:%M")}
+        for k, intish in FIELDS:
             v = rec.get(k, "").strip()
-            if v == "":
-                return None
-            f = float(v)
-            return int(round(f)) if intish else round(f, 2)
-
-        rows.append({
-            "t": jst.strftime("%H:%M"),
-            "co2": num("co2", True),
-            "temp": num("temp", False),
-            "rh": num("rh", True),
-            "voc": num("voc", True),
-            "laeq": num("laeq", False),
-            "rssi": num("rssi", True),
-        })
-    return rows
+            row[k] = (int(round(float(v))) if intish else round(float(v), 2)) if v else None
+        rows.append(row)
+    return rows, room
 
 
 def build_html(rows, device, room, rng):
@@ -155,30 +145,12 @@ def build_html(rows, device, room, rng):
     tpl = head + tpl + "\n</body></html>\n"
     html = (tpl
             .replace("__DATA__", json.dumps(rows, ensure_ascii=False))
-            .replace("__CALIB__", "null")
-            .replace("__DEVLABEL__", f'<span class="chip"><span class="dot pulse" style="background:var(--good)"></span>{device}</span>')
+            .replace("__RANGE__", rng)
+            .replace("__DEVLABEL__", device)
             .replace("__ROOMLABEL__", f"room: {room}")
             .replace("__META_LINE__", f"InfluxDB office_env · {device}")
             .replace("__FOOTER__", footer))
     return html
-
-
-def guess_room(rows_device, query_url, token, device, rng):
-    """room タグを1点だけ引く（表示用）。取れなければ空。"""
-    flux = (f'from(bucket:"office_env") |> range(start:-{rng}) '
-            f'|> filter(fn:(r)=> r.device=="{device}") |> last() '
-            f'|> keep(columns:["room"]) |> limit(n:1)')
-    req = urllib.request.Request(query_url, data=flux.encode(), headers={
-        "Authorization": f"Token {token}", "Content-Type": "application/vnd.flux",
-        "Accept": "application/csv"}, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            for line in csv.reader(io.StringIO(resp.read().decode())):
-                if line and line[-1] and line[-1] not in ("room", "_result"):
-                    return line[-1]
-    except Exception:
-        pass
-    return ""
 
 
 def main():
@@ -194,10 +166,9 @@ def main():
 
     print(f"取得中: device={args.device} range=-{args.range} ...")
     csv_text = fetch(query_url, token, args.device, args.range)
-    rows = parse_csv(csv_text)
+    rows, room = parse_csv(csv_text)
     if not rows:
         sys.exit(f"データなし（device={args.device}, range=-{args.range}）。デバイス名か期間を確認して。")
-    room = guess_room(rows, query_url, token, args.device, args.range)
 
     html = build_html(rows, args.device, room or "?", args.range)
     os.makedirs(os.path.dirname(args.out), exist_ok=True)

@@ -170,8 +170,9 @@ display:
       auto t = id(sntp_time).now();
       if (t.is_valid() && (t.hour >= 20 || t.hour < 9)) return;
       // 焼き付き対策その3: 5分ごとに1pxシフト（dyは下方向のみ = 色境界(y=16)を跨がせない）
-      int dx = (int)((millis() / 300000UL) % 3) - 1;
-      int dy = (int)((millis() / 300000UL) % 2);
+      unsigned long tick5 = millis() / 300000UL;
+      int dx = (int)(tick5 % 3) - 1;
+      int dy = (int)(tick5 % 2);
       // ---- 黄色帯(y0-15): 左=部屋名 / 右=状態。CO2警報時は警告バナーに化ける ----
       it.printf(0 + dx, 2 + dy, id(font_small), TextAlign::TOP_LEFT, "${room}");
       if (!std::isnan(id(scd_co2).state) && id(scd_co2).state >= 1500) {
