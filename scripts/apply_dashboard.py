@@ -112,6 +112,8 @@ def apply_template(base_url, token, payload):
         sys.exit(f"Templates API 失敗: HTTP {e.code}\n{e.read().decode('utf-8', 'replace')}")
     except urllib.error.URLError as e:
         sys.exit(f"InfluxDB 接続失敗: {e.reason}")
+    except json.JSONDecodeError as e:
+        sys.exit(f"Templates API のレスポンスが JSON として解釈できない: {e}")
 
 
 def summarize(result, dry_run):
