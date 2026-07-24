@@ -19,7 +19,7 @@ ESP32-C3 + ESPHome によるオフィス環境モニタ。CO2・温度・湿度�
 | ファイル | 役割 |
 |---------|------|
 | `office-env-base.yaml` | 3台共通のベース設定（センサ・表示・送信ロジック） |
-| `env-1.yaml` | 個体別ラッパー。`substitutions` 3行を変えて `env-2` / `env-3` を作る |
+| `env-1.yaml` / `env-2.yaml` / `env-3.yaml` | 個体別ラッパー。`substitutions` 3行（device_name/friendly_name/room）だけ差分 |
 | `secrets.yaml` | WiFi / OTA / InfluxDB の秘匿値（**コミットしない**。`.gitignore` 済） |
 | `secrets.yaml.example` | secrets のサンプル（実値なし） |
 
@@ -115,6 +115,7 @@ INFLUX_TOKEN='<TOKEN>' python3 scripts/dashboard.py
 | 騒音値が高すぎ／平坦 | 未校正。上記「校正」を実施。中身は Z特性のため dBA より高く出る |
 | マイクが無音 | INMP441 の L/R 結線の個体差。`channel: left` → `right` に変更 |
 | OLED に何も出ない | I2C scan に `0x3C` が出るか確認。20–9時は焼き付き対策で消灯する仕様 |
+| OTA（無線更新）が `env-N.local` を解決できない | 共有APのクライアント分離 or 別ネット。固定IP/DHCP予約して `esphome run env-N.yaml --device <IP>` で直接指定。`office-env-base.yaml` の `manual_ip` コメントブロックも参照。分離環境ではUSB書き込み |
 
 ## InfluxDB ダッシュボード（device 横断・多系列）
 
@@ -149,3 +150,16 @@ python3 scripts/apply_dashboard.py
 # 既存スタックを更新（重複生成を避ける）
 python3 scripts/apply_dashboard.py --stack-id <STACK_ID>
 ```
+
+## 死活監視
+
+各デバイスが直近にデータを送っているかを InfluxDB で確認し、一定時間途絶したら検出する。依存なし（Python標準ライブラリ）。認証は dashboard.py と同じ（`influx_read_token` / 環境変数）。
+
+```bash
+python3 scripts/liveness_check.py                       # env-1..3 を5分閾値で確認
+python3 scripts/liveness_check.py --max-age 10          # 閾値10分
+python3 scripts/liveness_check.py --webhook <Slack URL> # 異常時にSlack通知
+```
+
+問題があれば終了コード1。cron で定期実行（例: `*/5 * * * * python3 .../scripts/liveness_check.py --webhook ...`）。InfluxDB ネイティブの deadman check を使う手もある。
+

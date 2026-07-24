@@ -101,7 +101,10 @@ esphome run env-1.yaml   # ポートは /dev/cu.usbmodem*
 - OLEDは黄(上16px)/青(下48px)の2色分割パネル前提のゾーンレイアウト。
   黄色帯=部屋名+電波/送信状態、CO2≥1500ppmで警告バナー化。白単色パネルでも同一レイアウトで成立
 - CO2≥1000ppmでCO2数字を2s周期で点滅（注意喚起）
+- CO2閾値は `substitutions` の `co2_high`(1500) / `co2_blink`(1000) に集約。ダッシュボードJSの閾値とも揃える
 - 焼き付き対策: コントラスト40% / 20–9時消灯 / 5分毎1pxシフト（色境界は跨がない）
+- WiFi: `output_power: 8.5dB`（ブラウンアウト対策）+ `fast_connect: true`（スキャン省略で直結）。
+  OTAはmDNS(`env-N.local`)。共有APのクライアント分離等で解決できない場合は `manual_ip`（コメントで雛形あり）で固定IP化し `--device <IP>` 指定
 
 ## データ契約（InfluxDB）
 
