@@ -12,7 +12,7 @@ ESP32-C3 + ESPHome によるオフィス環境モニタ。CO2・温度・湿度�
 | 騒音（Z特性RMS音圧, 1点校正済） | INMP441 | dB |
 | WiFi RSSI | ESP32-C3 | dBm |
 
-ハードウェア詳細（配線・ピンアサイン・BOM）は [`docs/hardware.md`](docs/hardware.md) を参照。
+詳細設計（アーキテクチャ・BOM・回路・データ契約・設置・実戦トラブルシュート）は [`docs/design.md`](docs/design.md) を参照。
 
 ## 構成ファイル
 
@@ -82,7 +82,7 @@ curl -s 'https://<region>.aws.cloud2.influxdata.com/api/v2/query?org=<ORG_ID>' \
   `新offset = 現offset + (基準計の値 − 現在の表示値)`
 - **温度**: `temperature_offset`（既定4.0）を室温計と比較して調整。
 
-詳細は [`docs/hardware.md`](docs/hardware.md) の「センサ校正メモ」参照。
+詳細は [`docs/design.md`](docs/design.md) の「校正」参照。
 
 ## トラブルシューティング
 
