@@ -76,6 +76,28 @@ curl -s 'https://<region>.aws.cloud2.influxdata.com/api/v2/query?org=<ORG_ID>' \
 - measurement: `env` / tags: `room`, `device` / fields: `co2` `temp` `rh` `voc` `nox` `laeq` `lamax` `rssi`
 - 常設ダッシュボードは Grafana を推奨。
 
+## ローカルダッシュボード
+
+InfluxDB から最新データを取得して、単一HTMLダッシュボードを生成・プレビューするスクリプト。依存なし（Python標準ライブラリのみ）。認証情報は `secrets.yaml` から自動で読む。
+
+```bash
+python3 scripts/dashboard.py                 # env-1・直近6h を生成してブラウザで開く
+python3 scripts/dashboard.py --device env-2  # 別の個体
+python3 scripts/dashboard.py --range 24h     # 期間指定（3h / 24h / 7d ...）
+python3 scripts/dashboard.py --no-open       # 生成のみ（開かない）
+```
+
+出力は `dist/dashboard.html`（`.gitignore` 済）。CO2・気温・湿度・VOC・騒音・WiFi の現在値タイルとトレンド、ホバーでツールチップ、データ表トグル付き。ライト/ダーク両対応。
+
+![ローカルダッシュボードの例](docs/img/dashboard.png)
+
+認証情報を環境変数で上書きする場合:
+
+```bash
+INFLUX_QUERY_URL='https://<region>.aws.cloud2.influxdata.com/api/v2/query?org=<ORG_ID>' \
+INFLUX_TOKEN='<TOKEN>' python3 scripts/dashboard.py
+```
+
 ## 校正
 
 - **騒音**: 設置場所でスマホ騒音計と1点校正する。`office-env-base.yaml` の `sound_level` → `offset` を調整。
