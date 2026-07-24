@@ -54,7 +54,10 @@ def load_secrets(path):
 
 def resolve_conn(secrets):
     """クエリURLとトークンを解決（環境変数 > secrets.yaml）。"""
-    token = (os.environ.get("INFLUX_TOKEN") or secrets.get("influx_auth_header", "")).replace("Token ", "").strip()
+    # 読み取り用トークンを優先（無ければ device write トークンにフォールバック）
+    token = (os.environ.get("INFLUX_TOKEN")
+             or secrets.get("influx_read_token")
+             or secrets.get("influx_auth_header", "")).replace("Token ", "").strip()
     query_url = os.environ.get("INFLUX_QUERY_URL")
 
     if not query_url:
