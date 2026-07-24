@@ -74,12 +74,13 @@ USB-C 5V ──► [ESP32-C3 SuperMini Plus]  (オンボードLDO → 3.3V)
 
 ```
 office-env/
-├── office-env-base.yaml   # 共通ロジック（センサ・OLED・Influx POST）
-├── env-1.yaml             # 個体ラッパー: device_name / room だけ定義
-├── env-2.yaml
-├── env-3.yaml
-├── secrets.yaml.example
-├── secrets.yaml           # gitignore対象。WiFi・Influxトークン
+├── config/
+│   ├── office-env-base.yaml   # 共通ロジック（センサ・OLED・Influx POST）
+│   ├── env-1.yaml             # 個体ラッパー: device_name / room だけ定義
+│   ├── env-2.yaml
+│   ├── env-3.yaml
+│   ├── secrets.yaml.example
+│   └── secrets.yaml           # gitignore対象。WiFi・Influxトークン
 └── docs/
     └── office_env_monitor_schematic_v3.svg
 ```
@@ -88,8 +89,8 @@ office-env/
 
 ```sh
 brew install esphome
-cp secrets.yaml.example secrets.yaml && vim secrets.yaml
-esphome run env-1.yaml   # ポートは /dev/cu.usbmodem*
+cp config/secrets.yaml.example config/secrets.yaml && vim config/secrets.yaml
+esphome run config/env-1.yaml   # ポートは /dev/cu.usbmodem*
 ```
 
 設計上のポイント:
@@ -128,6 +129,8 @@ tag値は英小文字スネークケースのみ（例: `open_space`）。日本
 
 > 命名の注記: `laeq`/`lamax` は歴史的経緯の命名。中身はZ特性のため計測学的には `lzeq`/`lzmax` が正しいが、
 > 既存データとの連続性のため据え置き。
+
+> 起動直後の注意: VOC/NOx（SGP41）は起動直後は送信されず、グラフに値が出るまで1〜2分・信頼できる相対値になるまで初回約1時間かかる（`store_baseline: true` で再起動時は短縮）。
 
 ## ダッシュボード（device横断・多系列）
 

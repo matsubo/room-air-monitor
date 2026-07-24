@@ -16,14 +16,16 @@ ESP32-C3 + ESPHome によるオフィス環境モニタ。CO2・温度・湿度�
 
 ## 構成ファイル
 
+ESPHome 設定・秘匿値は `config/` に集約している。
+
 | ファイル | 役割 |
 |---------|------|
-| `office-env-base.yaml` | 3台共通のベース設定（センサ・表示・送信ロジック） |
-| `env-1.yaml` / `env-2.yaml` / `env-3.yaml` | 個体別ラッパー。`substitutions` 3行（device_name/friendly_name/room）だけ差分 |
-| `secrets.yaml` | WiFi / OTA / InfluxDB の秘匿値（**コミットしない**。`.gitignore` 済） |
-| `secrets.yaml.example` | secrets のサンプル（実値なし） |
+| `config/office-env-base.yaml` | 3台共通のベース設定（センサ・表示・送信ロジック） |
+| `config/env-1.yaml` / `config/env-2.yaml` / `config/env-3.yaml` | 個体別ラッパー。`substitutions` 3行（device_name/friendly_name/room）だけ差分 |
+| `config/secrets.yaml` | WiFi / OTA / InfluxDB の秘匿値（**コミットしない**。`.gitignore` 済） |
+| `config/secrets.yaml.example` | secrets のサンプル（実値なし） |
 
-個体を増やす場合は `env-1.yaml` をコピーし、`device_name` / `friendly_name` / `room` の3つを変更するだけ。
+個体を増やす場合は `config/env-1.yaml` をコピーし、`device_name` / `friendly_name` / `room` の3つを変更するだけ。
 
 ## セットアップ
 
@@ -40,8 +42,8 @@ esphome version            # 動作確認
 ### 2. secrets を用意
 
 ```bash
-cp secrets.yaml.example secrets.yaml
-# secrets.yaml を編集して各値を埋める
+cp config/secrets.yaml.example config/secrets.yaml
+# config/secrets.yaml を編集して各値を埋める
 ```
 
 ### 3. ビルド & 書き込み
@@ -50,7 +52,7 @@ cp secrets.yaml.example secrets.yaml
 # USBシリアルポートを確認（macOSの例）
 ls /dev/cu.usbmodem*
 
-esphome run env-1.yaml --device /dev/cu.usbmodem2101
+esphome run config/env-1.yaml --device /dev/cu.usbmodem2101
 ```
 
 - 初回は USB 経由、以降は OTA（無線）で更新可能。
@@ -100,7 +102,7 @@ INFLUX_TOKEN='<TOKEN>' python3 scripts/dashboard.py
 
 ## 校正
 
-- **騒音**: 設置場所でスマホ騒音計と1点校正する。`office-env-base.yaml` の `sound_level` → `offset` を調整。
+- **騒音**: 設置場所でスマホ騒音計と1点校正する。`config/office-env-base.yaml` の `sound_level` → `offset` を調整。
   `新offset = 現offset + (基準計の値 − 現在の表示値)`
 - **温度**: `temperature_offset`（既定4.0）を室温計と比較して調整。
 
@@ -115,7 +117,7 @@ INFLUX_TOKEN='<TOKEN>' python3 scripts/dashboard.py
 | 騒音値が高すぎ／平坦 | 未校正。上記「校正」を実施。中身は Z特性のため dBA より高く出る |
 | マイクが無音 | INMP441 の L/R 結線の個体差。`channel: left` → `right` に変更 |
 | OLED に何も出ない | I2C scan に `0x3C` が出るか確認。20–9時は焼き付き対策で消灯する仕様 |
-| OTA（無線更新）が `env-N.local` を解決できない | 共有APのクライアント分離 or 別ネット。固定IP/DHCP予約して `esphome run env-N.yaml --device <IP>` で直接指定。`office-env-base.yaml` の `manual_ip` コメントブロックも参照。分離環境ではUSB書き込み |
+| OTA（無線更新）が `env-N.local` を解決できない | 共有APのクライアント分離 or 別ネット。固定IP/DHCP予約して `esphome run config/env-N.yaml --device <IP>` で直接指定。`config/office-env-base.yaml` の `manual_ip` コメントブロックも参照。分離環境ではUSB書き込み |
 
 ## InfluxDB ダッシュボード（device 横断・多系列）
 
@@ -131,7 +133,7 @@ UI の時間レンジ・ズームに追従する。
 
 ### 準備
 
-`secrets.yaml` にダッシュボード読み書き権限のトークンを設定する（環境変数
+`config/secrets.yaml` にダッシュボード読み書き権限のトークンを設定する（環境変数
 `INFLUX_DASHBOARD_TOKEN` でも可）。
 
 ```

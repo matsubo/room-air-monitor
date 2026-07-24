@@ -164,7 +164,7 @@ def main():
     ap.add_argument("--no-open", action="store_true", help="ブラウザで開かない")
     args = ap.parse_args()
 
-    secrets = load_secrets(os.path.join(ROOT, "secrets.yaml"))
+    secrets = load_secrets(os.path.join(ROOT, "config", "secrets.yaml"))
     query_url, token = resolve_conn(secrets)
 
     print(f"取得中: device={args.device} range=-{args.range} ...")

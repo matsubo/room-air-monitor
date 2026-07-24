@@ -138,7 +138,7 @@ def main():
     ap.add_argument("--stack-id", default=None, help="更新対象スタックID（任意）")
     args = ap.parse_args()
 
-    secrets = load_secrets(os.path.join(ROOT, "secrets.yaml"))
+    secrets = load_secrets(os.path.join(ROOT, "config", "secrets.yaml"))
     base_url, token, org = resolve_conn(secrets, os.environ)
     contents = load_template(args.template)
     payload = build_payload(org, contents, args.dry_run, args.stack_id)

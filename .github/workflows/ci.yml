@@ -17,9 +17,9 @@ jobs:
       - name: Install ESPHome
         run: pip install esphome
       - name: Prepare dummy secrets
-        run: cp secrets.yaml.example secrets.yaml
+        run: cp config/secrets.yaml.example config/secrets.yaml
       - name: Validate configs
-        run: esphome config env-1.yaml env-2.yaml env-3.yaml
+        run: esphome config config/env-1.yaml config/env-2.yaml config/env-3.yaml
 
   pytest:
     name: Python テスト

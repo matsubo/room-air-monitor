@@ -1,8 +1,9 @@
 # Gitignore settings for ESPHome
 # This is an example and may include too much for your use-case.
 # You can modify this file to suit your needs.
-/.esphome/
-/secrets.yaml
+# esphome のビルドキャッシュ（config/ 配下でも生成されるため場所固定にしない）
+.esphome/
+/config/secrets.yaml
 
 # 生成物（dashboard.py の出力）
 /dist/

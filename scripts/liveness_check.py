@@ -87,7 +87,7 @@ def main():
     args = ap.parse_args()
 
     devices = [d.strip() for d in args.devices.split(",") if d.strip()]
-    secrets = load_secrets(os.path.join(ROOT, "secrets.yaml"))
+    secrets = load_secrets(os.path.join(ROOT, "config", "secrets.yaml"))
     query_url, token = resolve_conn(secrets)
 
     seen = last_seen(query_url, token)
