@@ -8,7 +8,7 @@ substitutions:
   friendly_name: Office Env 0
   room: test                # InfluxDBのroomタグ。英小文字スネークケース
   co2_high: "1500"          # CO2警告バナー(CO2 HIGH)閾値[ppm]。ダッシュボードJS/READMEの閾値と揃える
-  co2_blink: "1000"         # CO2数字を点滅させる異常値閾値[ppm]
+  co2_blink: "1000"         # CO2数字を白黒反転させる異常値閾値[ppm]（旧仕様の点滅から変更・キー名は互換のため据え置き）
 
 esphome:
   name: ${device_name}
@@ -215,15 +215,18 @@ display:
         it.printf(64 + dx, 16 + dy, id(font_big), TextAlign::TOP_CENTER, "----");
       } else {
         // 数字=大font / 単位ppm=小font に分離（大fontのpp descenderが下行へ突き抜けるのを回避）
-        // 異常値(≥1000ppm)は2s周期で点滅させ注意喚起（消灯フレームは数字を描かない）
+        // 異常値(≥1000ppm)は2s周期で白黒反転して注意喚起。点滅と違い数字が消えるフレームが無い
         bool co2_alarm = id(scd_co2).state >= ${co2_blink};
-        bool blink_off = ((millis() / 2000UL) % 2) == 1;
-        if (!(co2_alarm && blink_off)) {
-          it.printf(62 + dx, 16 + dy, id(font_big), TextAlign::TOP_RIGHT, "%.0f", id(scd_co2).state);
-          it.printf(65 + dx, 25 + dy, id(font_small), TextAlign::TOP_LEFT, "ppm");
+        bool invert = co2_alarm && ((millis() / 2000UL) % 2) == 1;
+        Color fg = invert ? COLOR_OFF : COLOR_ON;
+        // 反転帯は数字とppmだけを覆う: x86以降=スパークライン / y40以降=温湿度行 には掛けない
+        if (invert) {
+          it.filled_rectangle(0 + dx, 16 + dy, 86, 24);
         }
+        it.printf(62 + dx, 16 + dy, id(font_big), fg, TextAlign::TOP_RIGHT, "%.0f", id(scd_co2).state);
+        it.printf(65 + dx, 25 + dy, id(font_small), fg, TextAlign::TOP_LEFT, "ppm");
       }
-      // CO2 1hトレンド: 数字右の空きスペース(x86-)にスパークライン。点滅とは独立に常時描画
+      // CO2 1hトレンド: 数字右の空きスペース(x86-)にスパークライン。反転帯の外なので常時通常表示
       it.graph(86 + dx, 17 + dy, id(co2_graph));
       it.printf(64 + dx, 40 + dy, id(font_small), TextAlign::TOP_CENTER, "%.1f°C  %.0f%%",
                 id(scd_temp).state, id(scd_rh).state);
