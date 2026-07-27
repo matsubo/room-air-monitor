@@ -1,11 +1,13 @@
 import json
 import os
+import re
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE_PATH = os.path.join(ROOT, "influx", "dashboard-office-env.json")
 
-FIELDS = ["co2", "temp", "rh", "voc", "laeq", "mcu_temp"]
+# デバイスが送信する全フィールド（office-env-base.yaml の InfluxDB POST と一致させる）
+FIELDS = ["co2", "temp", "rh", "voc", "nox", "laeq", "lamax", "rssi", "mcu_temp"]
 
 # device ごとの固定色。キーは InfluxDB UI が生成する系列ID形式 "<device>-_result-"
 # （columnKeys = [...fluxGroupKeyUnion, "result"] の値を "-" 連結）と一致する必要がある。
@@ -19,6 +21,23 @@ DEVICE_COLORS = {
 def load_template():
     with open(TEMPLATE_PATH, encoding="utf-8") as f:
         return json.load(f)
+
+
+def firmware_fields():
+    """office-env-base.yaml の InfluxDB POST が送るフィールド名を抽出する。"""
+    path = os.path.join(ROOT, "config", "office-env-base.yaml")
+    with open(path, encoding="utf-8") as f:
+        return set(re.findall(r'add_[if]\("(\w+)"', f.read()))
+
+
+def charted_fields():
+    """テンプレートの各セルがクエリしているフィールド名を抽出する。"""
+    dash = next(r for r in load_template() if r.get("kind") == "Dashboard")
+    found = set()
+    for c in dash["spec"]["charts"]:
+        m = re.search(r'r\._field == "(\w+)"', c["queries"][0]["query"])
+        found.add(m.group(1))
+    return found
 
 
 class TemplateStructureTest(unittest.TestCase):
@@ -38,10 +57,10 @@ class TemplateStructureTest(unittest.TestCase):
         self.assertEqual(dash.get("apiVersion"), "influxdata.com/v2alpha1")
         self.assertIn("name", dash.get("metadata", {}))
 
-    def test_has_six_charts(self):
+    def test_has_one_chart_per_field(self):
         dash = next(r for r in self.contents if r.get("kind") == "Dashboard")
         charts = dash["spec"]["charts"]
-        self.assertEqual(len(charts), 6)
+        self.assertEqual(len(charts), len(FIELDS))
 
     def test_each_chart_is_xy_line(self):
         dash = next(r for r in self.contents if r.get("kind") == "Dashboard")
@@ -70,6 +89,19 @@ class TemplateStructureTest(unittest.TestCase):
             self.assertIn("v.timeRangeStart", q)
             self.assertNotIn('r.device ==', q)
             self.assertNotIn('r["device"] ==', q)
+
+    def test_covers_every_field_the_firmware_sends(self):
+        """ファームが InfluxDB へ送る全フィールドにセルがあること（表示漏れの再発防止）。"""
+        self.assertEqual(charted_fields(), firmware_fields())
+
+    def test_local_dashboard_covers_every_field(self):
+        """ローカルHTMLダッシュボード(scripts/dashboard.py)も全フィールドを表示すること。"""
+        path = os.path.join(ROOT, "scripts", "dashboard.py")
+        with open(path, encoding="utf-8") as f:
+            src = f.read()
+        block = re.search(r"FIELDS = \[(.*?)\]", src, re.S).group(1)
+        local = {m for m in re.findall(r'\("(\w+)",', block)}
+        self.assertEqual(local, firmware_fields())
 
     def test_device_colors_are_fixed_in_every_chart(self):
         """全セルで device→色 が同一。セル間で同じ device が違う色になるのを防ぐ。"""

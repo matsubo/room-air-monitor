@@ -136,7 +136,7 @@ tag値は英小文字スネークケースのみ（例: `open_space`）。日本
 
 ## ダッシュボード（device横断・多系列）
 
-環境メトリック（co2 / temp / rh / voc / laeq）を device 別の多系列で表示する InfluxDB Cloud ダッシュボード。`influx/dashboard-office-env.json`（テンプレート）を `scripts/apply_dashboard.py` で適用する。device 固定フィルタを置かず `group(columns:["device"])` で系列化するため、env-2 / env-3 を投入すると系列が自動で増える。粒度は `v.windowPeriod` で時間レンジ・ズームに追従する。
+送信している9フィールド全て（co2 / temp / rh / voc / nox / laeq / lamax / rssi / mcu_temp）を device 別の多系列で表示する InfluxDB Cloud ダッシュボード（1フィールド=1セル）。`influx/dashboard-office-env.json`（テンプレート）を `scripts/apply_dashboard.py` で適用する。device 固定フィルタを置かず `group(columns:["device"])` で系列化するため、env-2 / env-3 を投入すると系列が自動で増える。粒度は `v.windowPeriod` で時間レンジ・ズームに追従する。
 
 ![Office Env — 全台横断ダッシュボード（InfluxDB Cloud）](img/influxdb-dashboard.png)
 

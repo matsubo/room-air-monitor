@@ -129,8 +129,11 @@ INFLUX_TOKEN='<TOKEN>' python3 scripts/dashboard.py
 
 ## InfluxDB ダッシュボード（device 横断・多系列）
 
-環境メトリック（co2 / temp / rh / voc / laeq / mcu_temp）を device 別の多系列で
-表示する InfluxDB Cloud ダッシュボードを、テンプレートから適用する。6セル構成。
+デバイスが送信する9フィールド全て（co2 / temp / rh / voc / nox / laeq / lamax /
+rssi / mcu_temp）を device 別の多系列で表示する InfluxDB Cloud ダッシュボードを、
+テンプレートから適用する。1フィールド=1セルの9セル構成（`lamax` のみ集約関数は
+`max`。最大値を平均すると意味を失うため）。送信フィールドとセルの対応は
+`tests/test_dashboard_template.py` が `office-env-base.yaml` と突き合わせて検証する。
 
 - テンプレート定義: `influx/dashboard-office-env.json`
 - 適用スクリプト: `scripts/apply_dashboard.py`（Python 標準ライブラリのみ）
