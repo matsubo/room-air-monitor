@@ -97,7 +97,7 @@ python3 scripts/dashboard.py --range 24h     # 期間指定（3h / 24h / 7d ...�
 python3 scripts/dashboard.py --no-open       # 生成のみ（開かない）
 ```
 
-出力は `dist/dashboard.html`（`.gitignore` 済）。CO2・気温・湿度・VOC・騒音・WiFi・MCU温度 の現在値タイルとトレンド、ホバーでツールチップ、データ表トグル付き。ライト/ダーク両対応。
+出力は `dist/dashboard.html`（`.gitignore` 済）。送信している9フィールド全て（CO2・気温・湿度・VOC・NOx・騒音・騒音Max・WiFi・MCU温度）の現在値タイルとトレンド、ホバーでツールチップ、データ表トグル付き。ライト/ダーク両対応。
 
 ![ローカルダッシュボードの例](docs/img/dashboard.png)
 

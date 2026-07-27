@@ -31,8 +31,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 JST = timezone(timedelta(hours=9))
 
 # フィールド定義（単一の出所）: (キー, 整数として丸めるか)
+# office-env-base.yaml が送る9フィールド全てを網羅すること（tests/test_dashboard_template.py で検証）
 FIELDS = [("co2", True), ("temp", False), ("rh", True),
-          ("voc", True), ("laeq", False), ("rssi", True), ("mcu_temp", False)]
+          ("voc", True), ("nox", True), ("laeq", False), ("lamax", False),
+          ("rssi", True), ("mcu_temp", False)]
 METRIC_KEYS = [k for k, _ in FIELDS]
 
 
