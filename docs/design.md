@@ -13,8 +13,8 @@ InfluxDB Cloudに集約して可視化する自作センサノード。
 flowchart LR
   subgraph office[オフィス]
     E1[env-1<br>open_space]
-    E2[env-2<br>TBD]
-    E3[env-3<br>TBD]
+    E2[env-2<br>entrance]
+    E3[env-3<br>meeting_room]
   end
   E1 & E2 & E3 -->|"HTTPS POST (line protocol, 60s)"| I[("InfluxDB Cloud Serverless<br>bucket: office_env")]
   I --> G["Grafana / Data Explorer"]
