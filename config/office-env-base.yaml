@@ -192,9 +192,10 @@ display:
     # 2色パネル(Yellow/Blue)前提レイアウト: 上16px=黄(ステータス帯) / 下48px=青(データ帯)
     # 白単色パネルが来ても同じレイアウトでそのまま成立する
     lambda: |-
-      // 焼き付き対策その2: 無人時間帯(20-9時)は消灯
+      // 焼き付き対策その2: 無人時間帯(20-9時)は消灯ではなくOLED輝度を最低(コントラスト0)に落とす
       auto t = id(sntp_time).now();
-      if (t.is_valid() && (t.hour >= 20 || t.hour < 9)) return;
+      bool night = t.is_valid() && (t.hour >= 20 || t.hour < 9);
+      id(oled).set_contrast(night ? 0.0f : 0.4f);
       // 焼き付き対策その3: 5分ごとに1pxシフト（dyは下方向のみ = 色境界(y=16)を跨がせない）
       unsigned long tick5 = millis() / 300000UL;
       int dx = (int)(tick5 % 3) - 1;
