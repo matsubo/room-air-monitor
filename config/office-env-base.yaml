@@ -9,6 +9,7 @@ substitutions:
   room: test                # InfluxDBのroomタグ。英小文字スネークケース
   co2_high: "1500"          # CO2警告バナー(CO2 HIGH)閾値[ppm]。ダッシュボードJS/READMEの閾値と揃える
   co2_blink: "1000"         # CO2数字を白黒反転させる異常値閾値[ppm]（旧仕様の点滅から変更・キー名は互換のため据え置き）
+  buf_max_points: "180"     # 未送信バッファの上限件数（60s間隔で約3時間分）。RAM限定・再起動で消える
 
 esphome:
   name: ${device_name}
@@ -59,6 +60,9 @@ globals:
   - id: g_post_ok
     type: bool
     initial_value: 'false'
+  - id: g_buf   # 未送信line protocolのRAMバッファ（WiFi瞬断対策。再起動で消える点に注意）
+    type: std::vector<std::string>
+    restore_value: false
 
 http_request:
   timeout: 10s
@@ -235,9 +239,44 @@ display:
                 id(sgp_voc).state, id(snd_spl).state);
 
 # ---------- InfluxDBへ毎分POST（README手順7の契約に準拠） ----------
+# WiFi瞬断対策: 送信前に必ずg_bufへ積み、接続時にバッファ全件をまとめて再送する（store-and-forward）。
+# 成功(204)して初めてクリアするので、送信失敗時は次周期に持ち越して再試行される。
 interval:
   - interval: 60s
     then:
+      - lambda: |-
+          std::string lp = "env,room=${room},device=${device_name} ";
+          bool first = true;
+          auto add_f = [&](const char *k, float v, int prec) {
+            if (std::isnan(v)) return;
+            char b[48];
+            snprintf(b, sizeof(b), "%s%s=%.*f", first ? "" : ",", k, prec, v);
+            lp += b; first = false;
+          };
+          auto add_i = [&](const char *k, float v) {
+            if (std::isnan(v)) return;
+            char b[48];
+            snprintf(b, sizeof(b), "%s%s=%di", first ? "" : ",", k, (int) lroundf(v));
+            lp += b; first = false;
+          };
+          add_i("co2",   id(scd_co2).state);
+          add_f("temp",  id(scd_temp).state, 2);
+          add_f("rh",    id(scd_rh).state, 1);
+          add_i("voc",   id(sgp_voc).state);
+          add_i("nox",   id(sgp_nox).state);
+          add_f("laeq",  id(snd_laeq).state, 1);
+          add_f("lamax", id(snd_lamax).state, 1);
+          add_i("rssi",  id(wifi_rssi).state);
+          add_f("mcu_temp", id(mcu_temp).state, 1);   // C3チップ内蔵温度（発熱監視用）
+          if (first) lp += "up=1i";   // 起動直後で全センサNaNでも400を避ける
+          // 送信が遅延してもInfluxDB上で正しい計測時刻になるよう、明示的にepoch秒(precision=sと一致)を付与
+          auto t = id(sntp_time).now();
+          if (t.is_valid()) lp += " " + std::to_string((long long) t.timestamp);
+          id(g_buf).push_back(lp);
+          if (id(g_buf).size() > (size_t) ${buf_max_points}) {
+            ESP_LOGW("buf", "buffer full (%u), dropping oldest", (unsigned) id(g_buf).size());
+            id(g_buf).erase(id(g_buf).begin());
+          }
       - if:
           condition:
             wifi.connected:
@@ -248,33 +287,12 @@ interval:
                   Authorization: !secret influx_auth_header
                   Content-Type: "text/plain; charset=utf-8"
                 body: !lambda |-
-                  std::string lp = "env,room=${room},device=${device_name} ";
-                  bool first = true;
-                  auto add_f = [&](const char *k, float v, int prec) {
-                    if (std::isnan(v)) return;
-                    char b[48];
-                    snprintf(b, sizeof(b), "%s%s=%.*f", first ? "" : ",", k, prec, v);
-                    lp += b; first = false;
-                  };
-                  auto add_i = [&](const char *k, float v) {
-                    if (std::isnan(v)) return;
-                    char b[48];
-                    snprintf(b, sizeof(b), "%s%s=%di", first ? "" : ",", k, (int) lroundf(v));
-                    lp += b; first = false;
-                  };
-                  add_i("co2",   id(scd_co2).state);
-                  add_f("temp",  id(scd_temp).state, 2);
-                  add_f("rh",    id(scd_rh).state, 1);
-                  add_i("voc",   id(sgp_voc).state);
-                  add_i("nox",   id(sgp_nox).state);
-                  add_f("laeq",  id(snd_laeq).state, 1);
-                  add_f("lamax", id(snd_lamax).state, 1);
-                  add_i("rssi",  id(wifi_rssi).state);
-                  add_f("mcu_temp", id(mcu_temp).state, 1);   // C3チップ内蔵温度（発熱監視用）
-                  if (first) lp += "up=1i";   // 起動直後で全センサNaNでも400を避ける
-                  return lp;
+                  std::string body;
+                  for (auto &l : id(g_buf)) body += l + "\n";
+                  return body;
                 on_response:
                   then:
                     - lambda: |-
                         id(g_post_ok) = (response->status_code == 204);
+                        if (id(g_post_ok)) id(g_buf).clear();
 
